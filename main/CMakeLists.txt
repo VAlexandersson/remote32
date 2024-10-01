@@ -1,2 +1,10 @@
-idf_component_register(SRCS "main.c"
-                    INCLUDE_DIRS ".")
+set(SOURCES main.c)
+
+idf_component_register(SRCS ${SOURCES}
+                    INCLUDE_DIRS "."
+                    REQUIRES
+                        freertos
+                        esp_common
+                        wifi 
+                        nvs_flash
+                        )
