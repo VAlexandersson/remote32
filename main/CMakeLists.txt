@@ -5,6 +5,7 @@ idf_component_register(SRCS ${SOURCES}
                     REQUIRES
                         freertos
                         esp_common
-                        wifi_manager 
                         nvs_flash
+                        wifi_manager 
+                        https_request
                         )

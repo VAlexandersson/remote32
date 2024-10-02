@@ -5,3 +5,6 @@ build/
 sdkconfig
 sdkconfig.old
 sdkconfig.defaults
+
+key.pem
+cert.pem

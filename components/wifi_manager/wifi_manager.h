@@ -20,7 +20,7 @@ typedef enum {
 typedef void (*wifi_event_callback_t)(wifi_state_t state);
 
 esp_err_t wifi_init(const char *ssid, const char *password);
-esp_err_t register_wifi_event_callback(wifi_event_callback_t callback);
+esp_err_t register_status_callback(wifi_event_callback_t callback);
 wifi_state_t wifi_get_status(void);
 
 #endif // WIFI_MANAGER_H
