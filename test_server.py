@@ -21,15 +21,14 @@ class SimpleHTTPRequestHandler(http.server.BaseHTTPRequestHandler):
         response = {'message': 'POST received'}
         self.wfile.write(json.dumps(response).encode('utf-8'))
 
-httpd = http.server.HTTPServer(('localhost', 4443), SimpleHTTPRequestHandler)
+httpd = http.server.HTTPServer(('0.0.0.0', 4443), SimpleHTTPRequestHandler)
 
 # Generate self-signed certificate using OpenSSL (if not already done):
 # openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -days 365 -nodes
 
 context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
 context.load_cert_chain(certfile="cert.pem", keyfile="key.pem")
-
 httpd.socket = context.wrap_socket(httpd.socket, server_side=True)
 
-print("Serving on https://localhost:4443")
+print("Serving on http://10.0.0.100:4443")
 httpd.serve_forever()

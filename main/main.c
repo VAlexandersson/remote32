@@ -26,8 +26,8 @@
 #define CONNECT_MESSAGE "{\"type\": \"CONNECT\"}"
 #define DISCONNECT_MESSAGE "{\"type\": \"CLOSE\"}"
 
-#define TEST_URL "https://localhost:4443"
-#define POST_DATA "{\"key\":\"ASDASDASDASDSADAD\"}"
+#define TEST_URL "https://10.0.0.100:4443"
+#define POST_DATA "{\"key\":\"TEST\"}"
 
 
 static bool wifi_connected = false;
@@ -42,7 +42,7 @@ void wifi_status_callback(wifi_state_t status) {
 
 void test_https_request_get() {
     char response[512]; // Adjust the size as needed
-    esp_err_t err = https_request_get(TEST_URL, response, sizeof(response));
+    esp_err_t err = https_request_get(TEST_URL, response, 512);
     if (err == ESP_OK) {
         ESP_LOGI(TAG, "HTTPS GET request successful, response: %s", response);
     } else {
@@ -51,8 +51,8 @@ void test_https_request_get() {
 }
 
 void test_https_request_post() {
-    char response[512]; // Adjust the size as needed
-    esp_err_t err = https_request_post(TEST_URL, POST_DATA, response, sizeof(response));
+    char response[1024]; // Adjust the size as needed
+    esp_err_t err = https_request_post(TEST_URL, POST_DATA, response, 1024);
     if (err == ESP_OK) {
         ESP_LOGI(TAG, "HTTPS POST request successful, response: %s", response);
     } else {
@@ -90,11 +90,15 @@ void app_main() {
     while (!wifi_connected) {
         vTaskDelay(100 / portTICK_PERIOD_MS);
     }
-    vTaskDelay(1000 / portTICK_PERIOD_MS);
-    ESP_LOGI(TAG, "Testing HTTPS POST request");
-    test_https_request_post();
 
-    ESP_LOGI(TAG, "Testing HTTPS GET request");
-    test_https_request_get();
+    while (1) {
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
+        ESP_LOGI(TAG, "Testing HTTPS POST request");
+        test_https_request_post();
+    
+        ESP_LOGI(TAG, "Testing HTTPS GET request");
+        test_https_request_get();
+        vTaskDelay(60000 / portTICK_PERIOD_MS);
+    }
 
 }

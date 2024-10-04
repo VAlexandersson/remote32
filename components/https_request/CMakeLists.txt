@@ -5,4 +5,6 @@ idf_component_register(SRCS ${SOURCES}
                     REQUIRES 
                         esp-tls 
                         esp_http_client
-                        )
+                    EMBED_TXTFILES
+                        ../../cert.pem
+                    )
