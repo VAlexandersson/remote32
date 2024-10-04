@@ -6,5 +6,8 @@ sdkconfig
 sdkconfig.old
 sdkconfig.defaults
 
+managed_components/
+libraries/
+
 key.pem
 cert.pem

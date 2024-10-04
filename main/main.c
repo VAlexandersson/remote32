@@ -10,6 +10,12 @@
 
 #include "wifi_manager.h"
 #include "https_request.h"
+#include "lwip/sockets.h"
+#include "lwip/netdb.h"
+//#include "../libraries/cJSON/cJSON.h"
+#include "cJSON.h"
+#include "mdns.h"
+
 
 #define LOG_LEVEL   ESP_LOG_VERBOSE
 #define TAG "MAIN"
@@ -61,15 +67,103 @@ void test_https_request_post() {
 }
 
 
-esp_err_t init_nvs(){
-    esp_err_t status = nvs_flash_init();
-    if (status == ESP_ERR_NVS_NO_FREE_PAGES || status == ESP_ERR_NVS_NEW_VERSION_FOUND) {
-        status = nvs_flash_erase();
-        if (status == ESP_OK) {
-            status = nvs_flash_init();
+void mdns_print_results(mdns_result_t *result) {
+    mdns_result_t *current = result;
+    while (current != NULL) {
+        
+        if (current->instance_name != NULL) {
+            ESP_LOGI(TAG, "Hostname: %s", current->hostname);
         }
+
+        if (current->addr != NULL) {
+            ESP_LOGI(TAG, "IP address: %s", ip4addr_ntoa(&current->addr->addr));
+        }
+        if (current->service_type != NULL) {
+            ESP_LOGI(TAG, "Service type: %s", current->service_type);
+        }
+
+        if(current->instance_name != NULL) {
+            ESP_LOGI(TAG, "Instance name: %s", current->instance_name);
+        }
+        ESP_LOGI(TAG, "Port: %d", current->port);
+        for (size_t i = 0; i < current->txt_count; i++) {
+            if (current->txt[i].key && current->txt[i].value){
+                ESP_LOGI(TAG, "TXT item: %s=%s", current->txt[i].key, current->txt[i].value);
+            }
+        }
+        current = current->next;
     }
-    return status;
+}
+
+esp_err_t find_chromecast(mdns_result_t **result) {
+
+    esp_err_t err = mdns_query_ptr("_googlecast", "_tcp", 5000, 1, result);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to query mDNS: %s", esp_err_to_name(err));
+        return ESP_FAIL;
+    }
+
+    if (result == NULL) {
+        ESP_LOGE(TAG, "No Chromecast found");
+        return ESP_FAIL;
+    }
+    return ESP_OK;
+}
+
+void interact_with_chromecast(const char *ip_address) {
+    struct sockaddr_in dest_addr;
+    dest_addr.sin_addr.s_addr = inet_addr(ip_address);
+    dest_addr.sin_family = AF_INET;
+    dest_addr.sin_port = htons(CHROMECAST_PORT);
+
+    int sock = socket(AF_INET, SOCK_STREAM, IPPROTO_IP);
+    if (sock < 0) {
+        ESP_LOGE(TAG, "Unable to create socket: errno %d", errno);
+        return;
+    }
+
+    ESP_LOGI(TAG, "Socket created, connecting to %s:%d", ip_address, CHROMECAST_PORT);
+    int err = connect(sock, (struct sockaddr *)&dest_addr, sizeof(dest_addr));
+    if (err != 0) {
+        ESP_LOGE(TAG, "Socket unable to connect: errno %d", errno);
+        close(sock);
+        return;
+    }
+
+    ESP_LOGI(TAG, "Successfully connected");
+
+    cJSON *root = cJSON_CreateObject();
+    cJSON_AddStringToObject(root, "type", "PING");
+    cJSON_AddStringToObject(root, "requestId", "1");
+    const char *message = cJSON_Print(root);
+
+    // Send the message
+    int to_write = strlen(message);
+    while (to_write > 0) {
+        int written = send(sock, message, to_write, 0);
+        if (written < 0) {
+            ESP_LOGE(TAG, "Error occurred during sending: errno %d", errno);
+            break;
+        }
+        to_write -= written;
+    }
+
+    // Clean up
+    cJSON_Delete(root);
+    free((void *)message);
+
+    // Receive response
+    char rx_buffer[128];
+    int len = recv(sock, rx_buffer, sizeof(rx_buffer) - 1, 0);
+    if (len < 0) {
+        ESP_LOGE(TAG, "recv failed: errno %d", errno);
+    } else {
+        rx_buffer[len] = 0; // Null-terminate the response
+        ESP_LOGI(TAG, "Received: %s", rx_buffer);
+    }
+
+    // Close the socket
+    close(sock);
 }
 
 void app_main() {    
@@ -90,7 +184,23 @@ void app_main() {
     while (!wifi_connected) {
         vTaskDelay(100 / portTICK_PERIOD_MS);
     }
+    ESP_LOGI(TAG, "WiFi connected");
+    
+    ESP_LOGI(TAG, "Initializing mDNS");
+    mdns_init();
+    mdns_hostname_set("esp32");
+    mdns_instance_name_set("ESP32 Chromecast");
 
+    ESP_LOGI(TAG, "FindinTrying to find Chromecast");
+    mdns_result_t *result = NULL;
+    status = find_chromecast(&result);
+    ESP_LOGI(TAG, "Chromecast %s", status == ESP_OK ? "found" : "not found");
+    if (status == ESP_OK) {
+        mdns_print_results(result);
+        interact_with_chromecast(ip4addr_ntoa(&result->addr->addr));
+        mdns_query_results_free(result);
+    }
+   /*
     while (1) {
         vTaskDelay(1000 / portTICK_PERIOD_MS);
         ESP_LOGI(TAG, "Testing HTTPS POST request");
@@ -100,5 +210,6 @@ void app_main() {
         test_https_request_get();
         vTaskDelay(60000 / portTICK_PERIOD_MS);
     }
+   */ 
 
 }

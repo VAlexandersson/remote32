@@ -8,4 +8,5 @@ idf_component_register(SRCS ${SOURCES}
                         nvs_flash
                         wifi_manager 
                         https_request
+                        cJSON
                         )
