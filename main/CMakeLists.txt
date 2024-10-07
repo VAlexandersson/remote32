@@ -9,4 +9,8 @@ idf_component_register(SRCS ${SOURCES}
                         wifi_manager 
                         https_request
                         cJSON
-                        )
+                        secure_client
+                        nanopb
+                        protobuf
+                    EMBED_FILES 
+                        "../certs/cert.pem")
