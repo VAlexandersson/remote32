@@ -30,5 +30,4 @@ context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
 context.load_cert_chain(certfile="cert.pem", keyfile="key.pem")
 httpd.socket = context.wrap_socket(httpd.socket, server_side=True)
 
-print("Serving on http://10.0.0.100:4443")
 httpd.serve_forever()
